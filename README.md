@@ -2,7 +2,7 @@
 Código do Joao TextEditor (jTE) e outras 
 
 Changelog:
-
+```
 v1.0.0:
 Versão inicial. Trouxe:
 Editor,
@@ -34,4 +34,4 @@ Agora a área de edição de texto e os botões tem aria-label,
 Substituido document.write para innerHTML,
 
 Adicionado a numeração da versão do jTE do lado dos botões.
-
+```
