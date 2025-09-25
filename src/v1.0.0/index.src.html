@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Joao TextEditor</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Consolas', monospace;
+      background: #1e1e1e;
+      color: #fff;
+      overflow: hidden;
+    }
+    header {
+      background: #3a3a3a;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+    }
+    button {
+      margin-left: 10px;
+      padding: 6px 12px;
+      background: #007acc;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    textarea {
+      width: 100%;
+      height: calc(100vh - 50px);
+      background: #252526;
+      color: #d4d4d4;
+      border: none;
+      resize: none;
+      padding: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    #contextMenu {
+      position: absolute;
+      background: #2d2d30;
+      border: 1px solid #444;
+      border-radius: 4px;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 0 5px #000;
+    }
+    #contextMenu ul {
+      list-style: none;
+      margin: 0;
+      padding: 5px 0;
+    }
+    #contextMenu li {
+      padding: 8px 20px;
+      cursor: pointer;
+    }
+    #contextMenu li:hover {
+      background: #007acc;
+    }
+    :focus { outline: none; }
+  </style>
+</head>
+<body>
+<div id="loadingScreen">
+  <div class="loader"></div>
+  <p>Carregando Joao TextEditor...</p>
+</div>
+<style>
+  #loadingScreen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #1e1e1e;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+
+  .loader {
+    border: 6px solid #3a3a3a;
+    border-top: 6px solid #007acc;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+
+  <header oncontextmenu="return false;">
+    <div>Joao TextEditor</div>
+    <div>
+      <button onclick="saveFile()">Salvar Como</button>
+      <button onclick="openFile()">Abrir Arquivo</button>
+      <button onclick="clearText()">Limpar Texto</button>
+<button onclick="openTab()">Texto na nova aba</button>
+    </div>
+  </header>
+
+  <textarea id="editor" placeholder="Clique com o botão direito para abrir o menu..."></textarea>
+
+  <div id="contextMenu" oncontextmenu="return false;">
+    <ul>
+      <li onclick="cutText()">Recortar</li>
+      <li onclick="copyText()">Copiar</li>
+      <li onclick="pasteText()">Colar</li>
+      <li onclick="selectAll()">Selecionar Tudo</li>
+      <li onclick="clearText()">Limpar Texto</li>
+    </ul>
+  </div>
+
+  <input type="file" id="fileInput" style="display:none" />
+
+  <script>
+    const editor = document.getElementById('editor');
+    const contextMenu = document.getElementById('contextMenu');
+
+    editor.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      const menuWidth = 180;
+      const menuHeight = 185;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      let posX = e.pageX;
+      let posY = e.pageY;
+
+      if (posX + menuWidth > viewportWidth) {
+        posX = viewportWidth - menuWidth;
+      }
+      if (posY + menuHeight > viewportHeight) {
+        posY = viewportHeight - menuHeight;
+      }
+
+      contextMenu.style.top = `${posY}px`;
+      contextMenu.style.left = `${posX}px`;
+      contextMenu.style.display = 'block';
+    });
+
+    document.addEventListener('click', () => {
+      contextMenu.style.display = 'none';
+    });
+
+    function selectAll() {
+      editor.select();
+    }
+
+    function clearText() {
+      editor.value = '';
+    }
+
+    function copyText() {
+      const selected = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+      navigator.clipboard.writeText(selected || editor.value)
+        .catch(err => alert('Erro ao copiar: ' + err));
+    }
+
+    function pasteText() {
+      navigator.clipboard.readText()
+        .then(text => {
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+          const before = editor.value.substring(0, start);
+          const after = editor.value.substring(end);
+          editor.value = before + text + after;
+          editor.selectionStart = editor.selectionEnd = start + text.length;
+        })
+        .catch(err => alert('Erro ao colar: ' + err));
+    }
+
+    function cutText() {
+      const selected = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+      navigator.clipboard.writeText(selected || editor.value)
+        .then(() => {
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+          editor.value = editor.value.substring(0, start) + editor.value.substring(end);
+          editor.selectionStart = editor.selectionEnd = start;
+        })
+        .catch(err => alert('Erro ao recortar: ' + err));
+    }
+
+    function saveFile() {
+      const blob = new Blob([editor.value], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.download = 'text.txt';
+      link.href = URL.createObjectURL(blob);
+      link.click();
+    }
+
+    function openFile() {
+      const input = document.getElementById('fileInput');
+      input.click();
+      input.onchange = () => {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+          editor.value = reader.result;
+        };
+        reader.readAsText(file);
+      };
+    }
+
+editor.addEventListener('input', () => {
+  localStorage.setItem('joao_texteditor_content', editor.value);
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('joao_texteditor_content');
+  if (saved) editor.value = saved;
+});
+
+function clearText() {
+  editor.value = '';
+  localStorage.removeItem('joao_texteditor_content');
+}
+
+function openTab() {
+  const text = editor.value;
+  const newWindow = window.open('about:blank#jTEPage', '_blank');
+  newWindow.document.write(`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>jTE Page</title>
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+      background: #fdfdfd;
+      color: #222;
+      padding: 40px;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .toolbar {
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 8px 16px;
+      margin-right: 10px;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #007acc;
+    }
+
+    pre {
+      width: 100%;
+      max-width: 800px;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 20px;
+      font-size: 16px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      border-radius: 1em;
+    }
+
+    @media print {
+      * { outline: none; }
+      .toolbar { display: none; }
+      body { padding: 0; }
+      pre { border: none; box-shadow: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">Imprimir</button>
+    <button onclick="window.close()">Fechar aba</button>
+  </div>
+
+  <pre contenteditable="true">
+${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+  </pre>
+</body>
+</html>
+  `);
+  newWindow.document.close();
+}
+
+
+window.addEventListener('load', () => {
+  const loading = document.getElementById('loadingScreen');
+  if (loading) loading.style.display = 'none';
+});
+  </script>
+</body>
+</html>
